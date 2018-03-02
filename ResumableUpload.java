@@ -39,7 +39,7 @@ public class ResumableUpload
      */
     public String requestUploadUrl(HttpServletRequest request, HttpServletResponse response, Credential credential, com.google.api.services.drive.model.File jsonStructure) throws MalformedURLException, IOException
     {
-        URL url = new URL("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable");
+        URL url = new URL("https://www.googleapis.com/upload/drive/v3/files"+((jsonStructure.getId() != null)?"/"+jsonStructure.getId():"")+"?uploadType=resumable");
         HttpURLConnection req = (HttpURLConnection) url.openConnection();
         req.setRequestMethod("POST");
         req.setDoInput(true);
@@ -49,7 +49,7 @@ public class ResumableUpload
         req.setRequestProperty("X-Upload-Content-Length", String.valueOf(jsonStructure.getSize()));
         req.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-        String body = "{ \"name\": \""+jsonStructure.getName()+"\" }";
+        String body = "{ \"name\": \""+jsonStructure.getName()+"\""+((jsonStructure.getParents() != null)?", \"parents\":[\""+jsonStructure.getParents().get(0)+"\"]":"")+" }";
         req.setRequestProperty("Content-Length", String.format(Locale.ENGLISH, "%d", body.getBytes().length));
         OutputStream outputStream = req.getOutputStream();
         outputStream.write(body.getBytes());
