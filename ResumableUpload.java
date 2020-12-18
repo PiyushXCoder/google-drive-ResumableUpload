@@ -7,8 +7,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Locale;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * A helpful java library/class for uploading large files in chunks on google drive.
@@ -26,8 +24,6 @@ public class ResumableUpload
   
     /**
      * This function returns url to which file is to be uploaded
-     * @param request HttpServletRequest
-     * @param response HttpServletResponse
      * @param credential google credential for AccessToken
      * @param jsonStructure  It will be used to get structure of file it should contain
      *              1) MimeType of file
@@ -37,7 +33,7 @@ public class ResumableUpload
      * @throws MalformedURLException
      * @throws IOException 
      */
-    public String requestUploadUrl(HttpServletRequest request, HttpServletResponse response, Credential credential, com.google.api.services.drive.model.File jsonStructure) throws MalformedURLException, IOException
+    public String requestUploadUrl(Credential credential, com.google.api.services.drive.model.File jsonStructure) throws MalformedURLException, IOException
     {
         URL url = new URL("https://www.googleapis.com/upload/drive/v3/files"+((jsonStructure.getId() != null)?"/"+jsonStructure.getId():"")+"?uploadType=resumable");
         HttpURLConnection req = (HttpURLConnection) url.openConnection();
@@ -67,8 +63,6 @@ public class ResumableUpload
     
     /**
      * Uploads String packet 
-     * @param request HttpServletRequest
-     * @param response HttpServletResponse
      * @param sessionUri Last Session Url
      * @param jsonStructure It will be used to get structure of file it should contain
      *              1) MimeType of file
@@ -81,7 +75,7 @@ public class ResumableUpload
      * @throws MalformedURLException
      * @throws IOException 
      */
-    public int uploadStringPacket(HttpServletRequest request, HttpServletResponse response, String sessionUri, com.google.api.services.drive.model.File jsonStructure, String packet, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
+    public int uploadStringPacket(String sessionUri, com.google.api.services.drive.model.File jsonStructure, String packet, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
     {
         URL url1 = new URL(sessionUri);
         HttpURLConnection req1 = (HttpURLConnection) url1.openConnection();
@@ -108,8 +102,6 @@ public class ResumableUpload
     
     /**
      * Upload java.io.File packet
-     * @param request HttpServletRequest
-     * @param response HttpServletResponse
      * @param sessionUri Last Session Url
      * @param jsonStructure It will be used to get structure of file it should contain
      *              1) MimeType of file
@@ -122,7 +114,7 @@ public class ResumableUpload
      * @throws MalformedURLException
      * @throws IOException 
      */    
-    public int uploadFilePacket(HttpServletRequest request, HttpServletResponse response, String sessionUri, com.google.api.services.drive.model.File jsonStructure, java.io.File file, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
+    public int uploadFilePacket(String sessionUri, com.google.api.services.drive.model.File jsonStructure, java.io.File file, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
     {
         URL url1 = new URL(sessionUri);
         HttpURLConnection req1 = (HttpURLConnection) url1.openConnection();
@@ -155,8 +147,6 @@ public class ResumableUpload
     /**
      * Upload File
      * Upload java.io.File packet
-     * @param request HttpServletRequest
-     * @param response HttpServletResponse
      * @param credential google credential for AccessToken
      * @param jsonStructure It will be used to get structure of file it should contain
      *              1) MimeType of file
@@ -165,9 +155,9 @@ public class ResumableUpload
      * @param file File to upload
      * @throws IOException 
      */
-    public void uploadFile(HttpServletRequest request, HttpServletResponse response, Credential credential, com.google.api.services.drive.model.File jsonStructure, java.io.File file) throws IOException, UploadFileException
+    public void uploadFile(Credential credential, com.google.api.services.drive.model.File jsonStructure, java.io.File file) throws IOException, UploadFileException
     {
-        String sessionUrl = requestUploadUrl(request, response, credential, jsonStructure);
+        String sessionUrl = requestUploadUrl(credential, jsonStructure);
         
         for(long i = 1, j = CHUNK_LIMIT;i <= jsonStructure.getSize();i+=CHUNK_LIMIT)
         {
@@ -175,7 +165,7 @@ public class ResumableUpload
             {
                 j = jsonStructure.getSize() - i + 1;
             }
-            int responseCode = uploadFilePacket(request, response, sessionUrl, jsonStructure, file, i-1, j);
+            int responseCode = uploadFilePacket(sessionUrl, jsonStructure, file, i-1, j);
             if(!(responseCode == OK || responseCode == CREATED || responseCode == INCOMPLETE)) throw new UploadFileException(responseCode);
         }
     }
@@ -183,8 +173,6 @@ public class ResumableUpload
     /**
      * 
      * Upload String
-     * @param request HttpServletRequest
-     * @param response HttpServletResponse
      * @param credential google credential for AccessToken
      * @param jsonStructure It will be used to get structure of file it should contain
      *              1) MimeType of file
@@ -193,9 +181,9 @@ public class ResumableUpload
      * @param text Text to upload
      * @throws IOException 
      */
-    public void uploadString(HttpServletRequest request, HttpServletResponse response, Credential credential, com.google.api.services.drive.model.File jsonStructure, String text) throws IOException, UploadFileException
+    public void uploadString(Credential credential, com.google.api.services.drive.model.File jsonStructure, String text) throws IOException, UploadFileException
     {
-        String sessionUrl = requestUploadUrl(request, response, credential, jsonStructure);
+        String sessionUrl = requestUploadUrl(credential, jsonStructure);
         
         for(long i = 1, j = CHUNK_LIMIT;i <= jsonStructure.getSize();i+=CHUNK_LIMIT)
         {
@@ -203,7 +191,7 @@ public class ResumableUpload
             {
                 j = jsonStructure.getSize() - i + 1;
             }
-            int responseCode = uploadStringPacket(request, response, sessionUrl, jsonStructure, text, i-1, j);
+            int responseCode = uploadStringPacket(sessionUrl, jsonStructure, text, i-1, j);
             if(!(responseCode == OK || responseCode == CREATED || responseCode == INCOMPLETE)) throw new UploadFileException(responseCode);
         }
     }
