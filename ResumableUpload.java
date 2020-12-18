@@ -179,7 +179,7 @@ public class ResumableUpload
      * @param text Text to upload
      * @throws IOException 
      */
-    public void uploadString(Credential credential, com.google.api.services.drive.model.File jsonStructure, String text) throws IOException, UploadFileException
+    public static void uploadString(Credential credential, com.google.api.services.drive.model.File jsonStructure, String text) throws IOException, UploadFileException
     {
         String sessionUrl = requestUploadUrl(credential, jsonStructure);
         
