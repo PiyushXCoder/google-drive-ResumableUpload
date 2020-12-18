@@ -33,7 +33,7 @@ public class ResumableUpload
      * @throws MalformedURLException
      * @throws IOException 
      */
-    public String requestUploadUrl(Credential credential, com.google.api.services.drive.model.File jsonStructure) throws MalformedURLException, IOException
+    public static String requestUploadUrl(Credential credential, com.google.api.services.drive.model.File jsonStructure) throws MalformedURLException, IOException
     {
         URL url = new URL("https://www.googleapis.com/upload/drive/v3/files"+((jsonStructure.getId() != null)?"/"+jsonStructure.getId():"")+"?uploadType=resumable");
         HttpURLConnection req = (HttpURLConnection) url.openConnection();
@@ -47,9 +47,9 @@ public class ResumableUpload
 
         String body = "{ \"name\": \""+jsonStructure.getName()+"\""+((jsonStructure.getParents() != null)?", \"parents\":[\""+jsonStructure.getParents().get(0)+"\"]":"")+" }";
         req.setRequestProperty("Content-Length", String.format(Locale.ENGLISH, "%d", body.getBytes().length));
-        OutputStream outputStream = req.getOutputStream();
-        outputStream.write(body.getBytes());
-        outputStream.close();
+        try (OutputStream outputStream = req.getOutputStream()) {
+            outputStream.write(body.getBytes());
+        }
         req.connect();
 
         String sessionUri = null;
@@ -75,29 +75,29 @@ public class ResumableUpload
      * @throws MalformedURLException
      * @throws IOException 
      */
-    public int uploadStringPacket(String sessionUri, com.google.api.services.drive.model.File jsonStructure, String packet, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
+    public static int uploadStringPacket(String sessionUri, com.google.api.services.drive.model.File jsonStructure, String packet, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
     {
-        URL url1 = new URL(sessionUri);
-        HttpURLConnection req1 = (HttpURLConnection) url1.openConnection();
+        URL url = new URL(sessionUri);
+        HttpURLConnection req = (HttpURLConnection) url.openConnection();
         
-        req1.setRequestMethod("PUT");
-        req1.setDoOutput(true);
-        req1.setDoInput(true);
-        req1.setConnectTimeout(10000);
+        req.setRequestMethod("PUT");
+        req.setDoOutput(true);
+        req.setDoInput(true);
+        req.setConnectTimeout(10000);
         
-        req1.setRequestProperty("Content-Type", jsonStructure.getMimeType());
-        req1.setRequestProperty("Content-Length", String.valueOf(uploadBytes));
-        req1.setRequestProperty("Content-Range", "bytes " + chunkStart + "-" + (chunkStart + uploadBytes -1) + "/" + jsonStructure.getSize());
+        req.setRequestProperty("Content-Type", jsonStructure.getMimeType());
+        req.setRequestProperty("Content-Length", String.valueOf(uploadBytes));
+        req.setRequestProperty("Content-Range", "bytes " + chunkStart + "-" + (chunkStart + uploadBytes -1) + "/" + jsonStructure.getSize());
         
         byte[] buffer = packet.substring((int)chunkStart, (int)(chunkStart + uploadBytes)).getBytes();
                 
-        OutputStream outputStream1 = req1.getOutputStream();
-        outputStream1.write(buffer);
-        outputStream1.close();
+        try (OutputStream outputStream = req.getOutputStream()) {
+            outputStream.write(buffer);
+        }
         
-        req1.connect();
+        req.connect();
         
-        return req1.getResponseCode();
+        return req.getResponseCode();
     }
     
     /**
@@ -114,34 +114,32 @@ public class ResumableUpload
      * @throws MalformedURLException
      * @throws IOException 
      */    
-    public int uploadFilePacket(String sessionUri, com.google.api.services.drive.model.File jsonStructure, java.io.File file, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
+    public static int uploadFilePacket(String sessionUri, com.google.api.services.drive.model.File jsonStructure, java.io.File file, long chunkStart, long uploadBytes) throws MalformedURLException, IOException
     {
         URL url1 = new URL(sessionUri);
-        HttpURLConnection req1 = (HttpURLConnection) url1.openConnection();
+        HttpURLConnection req = (HttpURLConnection) url1.openConnection();
         
-        req1.setRequestMethod("PUT");
-        req1.setDoOutput(true);
-        req1.setDoInput(true);
-        req1.setConnectTimeout(10000);
+        req.setRequestMethod("PUT");
+        req.setDoOutput(true);
+        req.setDoInput(true);
+        req.setConnectTimeout(10000);
         
-        req1.setRequestProperty("Content-Type", jsonStructure.getMimeType());
-        req1.setRequestProperty("Content-Length", String.valueOf(uploadBytes));
-        req1.setRequestProperty("Content-Range", "bytes " + chunkStart + "-" + (chunkStart + uploadBytes -1) + "/" + jsonStructure.getSize());
+        req.setRequestProperty("Content-Type", jsonStructure.getMimeType());
+        req.setRequestProperty("Content-Length", String.valueOf(uploadBytes));
+        req.setRequestProperty("Content-Range", "bytes " + chunkStart + "-" + (chunkStart + uploadBytes -1) + "/" + jsonStructure.getSize());
         
-        OutputStream outstream = req1.getOutputStream();
+        try (OutputStream outstream = req.getOutputStream()) {
+            byte[] buffer = new byte[(int) uploadBytes];
+            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                fileInputStream.getChannel().position(chunkStart);
+                if (fileInputStream.read(buffer, 0, (int) uploadBytes) != -1)
+                    outstream.write(buffer);
+            }
+        }
+        
+        req.connect();
                 
-        byte[] buffer = new byte[(int) uploadBytes];
-        FileInputStream fileInputStream = new FileInputStream(file);
-        fileInputStream.getChannel().position(chunkStart);
-        if (fileInputStream.read(buffer, 0, (int) uploadBytes) == -1);
-        fileInputStream.close();
-        
-        outstream.write(buffer);
-        outstream.close();
-        
-        req1.connect();
-                
-        return req1.getResponseCode();
+        return req.getResponseCode();
     }
     
     /**
@@ -155,7 +153,7 @@ public class ResumableUpload
      * @param file File to upload
      * @throws IOException 
      */
-    public void uploadFile(Credential credential, com.google.api.services.drive.model.File jsonStructure, java.io.File file) throws IOException, UploadFileException
+    public static void uploadFile(Credential credential, com.google.api.services.drive.model.File jsonStructure, java.io.File file) throws IOException, UploadFileException
     {
         String sessionUrl = requestUploadUrl(credential, jsonStructure);
         
@@ -199,7 +197,7 @@ public class ResumableUpload
     /**
      * Exception thrown when there is a problem while uploading file 
      */
-    public class UploadFileException extends Exception
+    public static class UploadFileException extends Exception
     {
         public UploadFileException()
         {
